@@ -1,0 +1,48 @@
+services:
+  postgres:
+    container_name: postgres
+    volumes:
+      - ./postgres/data:/var/lib/postgresql/data
+    env_file: ./postgres/.env
+    #environment:
+      #- POSTGRES_DB=
+      #- POSTGRES_PASSWORD=
+      #- POSTGRES_USER=
+    #restart: on-failure
+    image: postgres:12-alpine
+  redis:
+    container_name: redis
+    restart: on-failure
+    image: redis:alpine
+  authentik-server:
+    container_name: authentik-server
+    command: server
+    ports:
+      - 9000:9000/tcp
+      - 9443:9443/tcp
+    volumes:
+      - ./authentik/media:/media
+      - ./authentik/templates:/templates
+    env_file: ./authentik/.env
+    environment:
+      - AUTHENTIK_REDIS__HOST=redis
+      - AUTHENTIK_POSTGRESQL__HOST=postgresql
+      - AUTHENTIK_ERROR_REPORTING__ENABLED=false
+    #restart: on-failure
+    image: ghcr.io/goauthentik/server:2022.7.2
+  authentik-worker:
+    container_name: authentik-worker
+    command: worker
+    user: root
+    volumes:
+      - ./authentik/media:/media
+      - ./authentik/templates:/templates
+      - ./authentik/certs:/certs
+      - /var/run/docker.sock:/var/run/docker.sock
+    env_file: ./authentik/.env
+    environment:
+      - AUTHENTIK_REDIS__HOST=redis
+      - AUTHENTIK_POSTGRESQL__HOST=postgresql
+      - AUTHENTIK_ERROR_REPORTING__ENABLED=false
+    #restart: on-failure
+    image: ghcr.io/goauthentik/server:2022.7.2

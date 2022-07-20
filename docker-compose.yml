@@ -1,48 +1,66 @@
 services:
-  postgres:
-    container_name: postgres
-    volumes:
-      - ./postgres/data:/var/lib/postgresql/data
-    env_file: ./postgres/.env
-    #environment:
-      #- POSTGRES_DB=
-      #- POSTGRES_PASSWORD=
-      #- POSTGRES_USER=
-    #restart: on-failure
-    image: postgres:12-alpine
-  redis:
-    container_name: redis
-    restart: on-failure
-    image: redis:alpine
-  authentik-server:
-    container_name: authentik-server
+  server:
     command: server
     ports:
-      - 9000:9000/tcp
-      - 9443:9443/tcp
+      - 127.0.0.1:9000:9000/tcp
+      - 127.0.0.1:9443:9443/tcp
     volumes:
-      - ./authentik/media:/media
-      - ./authentik/templates:/templates
-    env_file: ./authentik/.env
+      - ./data/media:/media
+      - ./data/templates:/templates
+      - geoip:/geoip
+    env_file: .env
     environment:
-      - AUTHENTIK_REDIS__HOST=redis
-      - AUTHENTIK_POSTGRESQL__HOST=postgresql
-      - AUTHENTIK_ERROR_REPORTING__ENABLED=false
-    #restart: on-failure
+      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_POSTGRESQL__HOST: postgres
+      AUTHENTIK_POSTGRESQL__USER: ${PG_USER}
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+      # WORKERS: 2
+    restart: on-failure
     image: ghcr.io/goauthentik/server:2022.7.2
-  authentik-worker:
-    container_name: authentik-worker
+  worker:
     command: worker
     user: root
     volumes:
-      - ./authentik/media:/media
-      - ./authentik/templates:/templates
-      - ./authentik/certs:/certs
+      - ./data/media:/media
+      - ./data/templates:/templates
+      - ./data/certs:/certs
+      - geoip:/geoip
       - /var/run/docker.sock:/var/run/docker.sock
-    env_file: ./authentik/.env
+    env_file: .env
     environment:
-      - AUTHENTIK_REDIS__HOST=redis
-      - AUTHENTIK_POSTGRESQL__HOST=postgresql
-      - AUTHENTIK_ERROR_REPORTING__ENABLED=false
-    #restart: on-failure
+      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_POSTGRESQL__HOST: postgres
+      AUTHENTIK_POSTGRESQL__USER: ${PG_USER}
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+    restart: on-failure
     image: ghcr.io/goauthentik/server:2022.7.2
+  redis:
+    restart: on-failure
+    image: redis:alpine
+  postgres:
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    env_file: .env
+    environment:
+      - POSTGRES_PASSWORD=${PG_PASS}
+      - POSTGRES_USER=${PG_USER}
+      - POSTGRES_DB=${PG_DB}
+    restart: on-failure
+    image: postgres:12-alpine
+  geoip:
+    volumes:
+      - geoip:/usr/share/GeoIP
+    env_file: .env
+    environment:
+      - GEOIPUPDATE_EDITION_IDS=GeoLite2-City
+      - GEOIPUPDATE_FREQUENCY=8
+    restart: on-failure
+    image: maxmindinc/geoipupdate:latest
+
+volumes:
+  geoip:
+    driver: local

@@ -21,7 +21,7 @@ services:
       AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
       # WORKERS: 2
     restart: on-failure
-    image: ghcr.io/goauthentik/server:2022.7.2
+    image: ghcr.io/goauthentik/server:2022.7.3
   authentik-worker:
     container_name: authentik-worker
     command: worker
@@ -43,7 +43,7 @@ services:
       AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
       AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
     restart: on-failure
-    image: ghcr.io/goauthentik/server:2022.7.2
+    image: ghcr.io/goauthentik/server:2022.7.3
   redis:
     networks:
       - caddy
